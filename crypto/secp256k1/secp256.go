@@ -37,6 +37,9 @@ import (
 	"errors"
 	"math/big"
 	"unsafe"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 )
 
 var context *C.secp256k1_context
@@ -57,6 +60,24 @@ var (
 	ErrSignFailed          = errors.New("signing failed")
 	ErrRecoverFailed       = errors.New("recovery failed")
 )
+
+// Generate a private key and the public key
+//
+// The length of private key is 32
+// and the length of public key is 65 (prefix: 1 + x: 3e + y: 32)
+func GenerateKeyPair() (privkey, pubkey []byte) {
+	key, err := ecdsa.GenerateKey(S256(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	pubkey = elliptic.Marshal(S256(), key.X, key.Y)
+
+	privkey = make([]byte, 32)
+	blob := key.D.Bytes()
+	copy(privkey[32-len(blob):], blob)
+
+	return privkey, pubkey
+}
 
 // Sign creates a recoverable ECDSA signature.
 // The produced signature is in the 65-byte [R || S || V] format where V is 0 or 1.
